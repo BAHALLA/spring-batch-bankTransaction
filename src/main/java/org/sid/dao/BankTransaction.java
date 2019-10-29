@@ -1,5 +1,7 @@
 package org.sid.dao;
 
+import org.springframework.context.annotation.Bean;
+
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Transient;

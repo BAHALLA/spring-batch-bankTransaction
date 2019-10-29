@@ -14,11 +14,15 @@ import org.springframework.batch.item.file.LineMapper;
 import org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper;
 import org.springframework.batch.item.file.mapping.DefaultLineMapper;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
+import org.springframework.batch.item.support.CompositeItemProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
+
+import java.util.ArrayList;
+import java.util.List;
 
 
 @Configuration
@@ -29,8 +33,6 @@ public class SpringBatchConfig {
     @Autowired
     private ItemWriter<BankTransaction> bankTransactionItemWriter;
     @Autowired
-    private ItemProcessor<BankTransaction, BankTransaction> transactionItemProcessor;
-    @Autowired
     private StepBuilderFactory stepBuilderFactory;
     @Autowired
     private JobBuilderFactory jobBuilderFactory;
@@ -40,7 +42,7 @@ public class SpringBatchConfig {
         Step step1 = stepBuilderFactory.get("step-load")
                 .<BankTransaction, BankTransaction>chunk(100)
                 .reader(bankTransactionItemReader)
-                .processor(transactionItemProcessor)
+                .processor(compositeItemProcessor())
                 .writer( bankTransactionItemWriter)
                 .build();
         return jobBuilderFactory.get("job-load-data")
@@ -48,6 +50,18 @@ public class SpringBatchConfig {
                 .build();
 
     }
+
+    @Bean
+    public ItemProcessor<? super BankTransaction,? extends BankTransaction> compositeItemProcessor() {
+        List<ItemProcessor<BankTransaction, BankTransaction>> itemProcessors = new ArrayList<>();
+        itemProcessors.add(transactionItemProcessor1());
+        itemProcessors.add(transactionItemProcessor2());
+        CompositeItemProcessor<BankTransaction, BankTransaction> compositeItemProcessor =
+                new CompositeItemProcessor<>();
+        compositeItemProcessor.setDelegates(itemProcessors);
+        return compositeItemProcessor;
+    }
+
     @Bean
     public FlatFileItemReader<BankTransaction> getFlatFileItemReader(@Value("${inputFile}")
                                                                                  Resource resource) {
@@ -74,5 +88,13 @@ public class SpringBatchConfig {
         return lineMapper;
     }
 
+    @Bean
+    public BankTransactionItemProcessor transactionItemProcessor1(){
+        return new BankTransactionItemProcessor();
+    }
+    @Bean
+    public BankTransactionItemProcessorAnalytics transactionItemProcessor2(){
+        return new BankTransactionItemProcessorAnalytics();
+    }
 
 }
